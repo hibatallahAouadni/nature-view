@@ -6,6 +6,9 @@ import { SetCoordinatesPage } from '../set-coordinates/set-coordinates';
 import { Camera } from '@ionic-native/camera';
 import { NatureViewService } from '../../services/natureView.service';
 import { NatureView } from '../../models/NatureView.model';
+import { File, Entry } from '@ionic-native/file';
+
+declare var cordova:any;
 
 @Component({
   selector: 'page-new-view',
@@ -23,7 +26,8 @@ export class NewViewPage implements OnInit {
               private camera: Camera,
               private toastCtrl: ToastController,
               private natureViewService: NatureViewService,
-              private navCtrl: NavController) {
+              private navCtrl: NavController,
+              private file: File) {
   }
 
   ngOnInit() {
@@ -70,7 +74,26 @@ export class NewViewPage implements OnInit {
     }).then(
       (data) => {
         if (data) {
-          this.imageUrl = normalizeURL(data);
+          const path = data.replace(/[^\/]*$/, '');
+          const filename = data.replace(/^.*[\\\/]/, '');
+          const targetDirectory = cordova.file.dataDirectory;
+          this.file.moveFile(path, filename, targetDirectory, filename + new Date().getTime() + '.jpg')
+            .then(
+              (data: Entry) => {
+                this.imageUrl = normalizeURL(data.nativeURL);
+                this.camera.cleanup();
+              }
+            )
+            .catch(
+              (error) => {
+                this.toastCtrl.create({
+                  message: error,
+                  duration: 3000,
+                  position: 'bottom'
+                }).present();
+                this.camera.cleanup();
+              }
+            )
         }
       }
     ).catch(
